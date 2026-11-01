@@ -1,8 +1,8 @@
-const CACHE_NAME = 'kaushalsetu-v1';
+const CACHE_NAME = 'kaushalsetu-pwa-v2';
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
   '/manifest.webmanifest',
+  '/manifest.json',
   '/logo.png',
   '/icon-192.png',
   '/icon-512.png',
@@ -11,7 +11,15 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of STATIC_ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (e) {
+          console.warn('[SW] Cache add skipped for', asset, e);
+        }
+      }
+    })
   );
   self.skipWaiting();
 });
@@ -19,26 +27,23 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      )
+      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)))
     )
   );
   self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const req = event.request;
+  const url = new URL(req.url);
 
-  // 1. Skip non-GET requests
-  if (event.request.method !== 'GET') return;
+  // Skip non-GET
+  if (req.method !== 'GET') return;
 
-  // 2. Never cache or intercept API endpoints or voice streaming
+  // Never intercept API calls or voice streaming
   if (url.pathname.startsWith('/api/')) return;
 
-  // 3. Never intercept Vite development assets / HMR
+  // Never intercept Vite dev HMR assets
   if (
     url.pathname.startsWith('/@') ||
     url.pathname.includes('node_modules') ||
@@ -48,32 +53,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. Handle navigation requests (SPA support: return cached index.html if offline)
-  if (event.request.mode === 'navigate') {
+  // Navigation requests: Network-first, fallback to cached '/'
+  if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(async () => {
+      fetch(req).catch(async () => {
         const cache = await caches.open(CACHE_NAME);
-        return cache.match('/') || cache.match('/index.html');
+        return (await cache.match('/')) || (await cache.match('/index.html'));
       })
     );
     return;
   }
 
-  // 5. Stale-while-revalidate for static assets
+  // Static assets: Cache-first with network fallback and background update
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+    caches.match(req).then((cached) => {
+      const networkFetch = fetch(req)
+        .then((resp) => {
+          if (resp && resp.status === 200 && resp.type === 'basic') {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
           }
-          return response;
+          return resp;
         })
         .catch(() => cached);
 
-      return cached || fetchPromise;
+      return cached || networkFetch;
     })
   );
 });
-
