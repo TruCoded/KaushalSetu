@@ -13,23 +13,7 @@ import { PartnerPage } from './Partner.jsx';
 function Header() {
   const { t, lang, setLang, user, signOut } = useApp();
   const [solid, setSolid] = useState(false), loc = useLocation(), home = loc.pathname === '/';
-  const [installPrompt, setInstallPrompt] = useState(null);
-
   useEffect(() => { const f = () => setSolid(scrollY > 40); f(); addEventListener('scroll', f, { passive: true }); return () => removeEventListener('scroll', f); }, []);
-
-  useEffect(() => {
-    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') setInstallPrompt(null);
-  };
-
   const L = ({ to, k }) => <NavLink className={({ isActive }) => 'l' + (isActive ? ' on' : '')} to={to} end={to === '/'}>{t(k)}</NavLink>;
   return (
     <header className={solid ? 'solid' : home ? '' : 'solid2'}>
@@ -48,11 +32,6 @@ function Header() {
             </button>
           ))}
         </div>
-        {installPrompt && (
-          <button type="button" className="l cta" onClick={handleInstallClick} style={{ background: '#2563eb', color: '#fff', border: 0, fontWeight: 600 }}>
-            📲 Install App
-          </button>
-        )}
         {user ? <><L to={user.role === 'partner' ? '/partner' : '/dashboard'} k="dash" /><button className="l" onClick={signOut}>{t('logout')}</button></>
           : <><Link className="l" to="/login">{t('signin')}</Link><Link className="l cta" to="/register">{t('join')}</Link></>}
       </div>
