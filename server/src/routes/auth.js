@@ -16,7 +16,7 @@ r.post('/check-phone', async (q, s) => {
 });
 
 r.post('/register', async (q, s) => {
-  const { role, name = '', phone = '', city = '', language = 'hi', company = '' } = q.body;
+  const { role, name = '', phone = '', city = '', language = 'en', company = '' } = q.body;
   // No OTP (paid SMS). If the person leaves the password empty we generate an easy 6-digit one and show it once.
   const given = String(q.body.password || ''), generated = given ? '' : makePassword(), password = given || generated;
   if (!['worker', 'employer', 'partner'].includes(role)) throw bad('Choose worker, employer, or partner');
@@ -32,7 +32,7 @@ r.post('/register', async (q, s) => {
   }
   const u = await User.create({
     role, name: name.trim(), phone, city: await canonCity(city || workerFields.city || ''), company: role === 'employer' ? company : undefined,
-    language: LANG.test(language) ? language : 'pa',
+    language: LANG.test(language) ? language : 'en',
     ...workerFields,
     passwordHash: await bcrypt.hash(password, 10)
   });

@@ -6,7 +6,9 @@ import './styles.css';
 createRoot(document.getElementById('root')).render(<BrowserRouter><Provider><App /></Provider></BrowserRouter>);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const r of registrations) r.unregister();
-  }).catch(() => {});
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
 }

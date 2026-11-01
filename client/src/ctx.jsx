@@ -87,16 +87,16 @@ function pickVoice(code) {
 
 export function Provider({ children }) {
   const [lang, setLangState] = useState(() => {
-    const v2 = localStorage.getItem('ks-lang-v2');
-    if (!v2) {
-      localStorage.setItem('ks-lang-v2', '1');
-      localStorage.setItem('ks-lang', 'pa');
-      return 'pa';
+    const pref = localStorage.getItem('ks-lang-pref-v1');
+    if (!pref) {
+      localStorage.setItem('ks-lang-pref-v1', '1');
+      localStorage.setItem('ks-lang', 'en');
+      return 'en';
     }
     const saved = localStorage.getItem('ks-lang');
-    return known(saved) ? saved : 'pa';
+    return known(saved) ? saved : 'en';
   });
-  const [picker, setPicker] = useState(() => !localStorage.getItem('ks-lang'));
+  const [picker, setPicker] = useState(false);
   const [dict, setDict] = useState({});
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
